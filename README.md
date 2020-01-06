@@ -22,3 +22,9 @@ You will need to have the following completed prior to working through the deplo
         * In Stacks click on <Name-of-EKSStack>-EKSStack-<random suffix>
             * ex. “eks-run-1-EKSStack-1IOKX7GLR4KM5”
 
+
+<b> Templates </b>
+
+1. "helm-wordpress-deploy.yml" - Deploys Wordpress using a Helm Chart, and automatically handles the database setup and configuration. 
+
+2. "helm-wordpress-deploy-RDS.yml" - Deploys Wordpress using a Helm Chart and an external RDS database (Mariadb) that is created within the template. 
