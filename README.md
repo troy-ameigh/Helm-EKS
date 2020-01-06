@@ -1,5 +1,6 @@
 # Helm-EKS
-Goes along with the Blog on deploying apps in EKS using Helm and CloudFormation.
+Goes along with the Blog on deploying apps in EKS using Helm and CloudFormation. 
+BLOG Link: <TBD>
 
 <b> Pre-requisites </b>
 
