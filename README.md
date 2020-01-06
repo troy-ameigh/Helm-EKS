@@ -1,7 +1,7 @@
 # Helm-EKS
 Goes along with the Blog on deploying apps in EKS using Helm and CloudFormation.
 
-Pre-requisites
+<b> Pre-requisites </b>
 
 You will need to have the following completed prior to working through the deployment part of the blog. 
 
