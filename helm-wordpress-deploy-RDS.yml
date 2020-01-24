@@ -231,18 +231,18 @@ Resources:
         externalDatabase.password: !Ref DBMasterUserPassword
         externalDatabase.database: !Ref DBName
         externalDatabase.port: 3306
-    WPElbHostName:
-      DependsOn: HelmExample
-      Type: "Custom::KubeGet"
-      Version: '1.0'
-      Properties:
-       ServiceToken: !Ref KubeGetLambdaArn
-       KubeConfigPath: !Ref KubeConfigPath
-       KubeConfigKmsContext: !Ref KubeConfigKmsContext
-       Namespace: !Ref Namespace
-       Name: !Sub 'service/${Name}-wordpress'
-       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
+  WPElbHostName:
+    DependsOn: HelmExample
+    Type: "Custom::KubeGet"
+    Version: '1.0'
+    Properties:
+     ServiceToken: !Ref KubeGetLambdaArn
+     KubeConfigPath: !Ref KubeConfigPath
+     KubeConfigKmsContext: !Ref KubeConfigKmsContext
+     Namespace: !Ref Namespace
+     Name: !Sub 'service/${Name}-wordpress'
+     JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 
-  Outputs:
-    WPElbHostName:
-      Value: !Ref WPElbHostName
+Outputs:
+  WPElbHostName:
+    Value: !Ref WPElbHostName
