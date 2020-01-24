@@ -2,70 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: This Cloudformation template shows you how to use Cloudformation to deploy
   WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart"
   which is a qre-requist. "https://docs.aws.amazon.com/quickstart/latest/amazon-eks-architecture/welcome.html" **WARNING** You will be billed for the AWS resources used if you create a stack from this template.
-Metadata:
-  AWS::CloudFormation::Interface:
-    ParameterGroups:
-      - Label:
-          default: Wordpress
-        Parameters:
-          - wordpressUsername
-          - wordpressPassword
-      - Label:
-          default: Kube Cluster
-        Parameters:
-          - KubeClusterName
-          - KubeConfigPath
-          - KubeGetLambdaArn
-          - KubeConfigKmsContext
-          - HelmLambdaArn
-          - Namespace
-          - Name
-      - Label:
-          default: MariaDB (RDS)
-        Parameters:
-          - DBMasterUsername
-          - DBMasterUserPassword
-          - DBName
-          - Subnet1ID
-          - Subnet2ID
-          - VPCID
-          - NodeGroupSecurityGroupId
-          - BastionSecurityGroupId
-    ParameterLabels:
-      wordpressUsername:
-        default: Wordpress Username
-      wordpressPassword:
-        default: Wordpress Password
-      KubeClusterName:
-        default: EKS Kube Cluster Name
-      KubeConfigPath:
-        default: Kube Config Path
-      KubeGetLambdaArn:
-        default: Kube Get Lambda ARN
-      KubeConfigKmsContext:
-        default: Kube KMS Context
-      HelmLambdaArn:
-        default: EKS Stack Helm ARN
-      Namespace:
-        default: Kube Namespace for this function
-      Name:
-        default: Kube Name for this function
-      DBMasterUsername:
-        default: MariaDB Master User Name
-      DBMasterUserPassword:
-        default: MariaDB Master User Password
-      DBName:
-        default: MariaDB Database Name
-      Subnet1ID:
-        default: Private Subnet One
-      Subnet2ID:
-        default: Private Subnet Two
-      VPCID:
-        default: EKS Stack VPC ID
-      NodeGroupSecurityGroupId:
-        default: Node SecurityGroup ID
-      BastionSecurityGroupId:
-        default: Bastion SecurityGroup ID
 Parameters:
    wordpressUsername:
     AllowedPattern: ^[a-z][a-z0-9_]*$
@@ -146,6 +82,12 @@ Parameters:
    Subnet2ID:
     Description: 'Get Private Subnet 2 ID from the VPCStack outputs section in CloudFormation.'
     Type: AWS::EC2::Subnet::Id
+   Subnet1IDCIDR:
+    Description: 'Get CIDR from Private Subnet 1 ID from the VPCStack outputs section in CloudFormation.'
+    Type: String
+   Subnet2IDCIDR:
+    Description: 'Get CIDR from Private Subnet 2 ID from the VPCStack outputs section in CloudFormation.'
+    Type: String
    NodeGroupSecurityGroupId:
     Description: 'Get NodeGroupSecurityGroupId from the EKSStack outputs section in CloudFormation.'
     Type: String
@@ -155,6 +97,14 @@ Parameters:
    VPCID:
     Type: AWS::EC2::VPC::Id
     Description: 'Get VCP ID from the VPCStack outputs section in CloudFormation.'
+   ZipsBucket:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: S3 bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Description: S3 bucket name where the Lambda Zip file is. You need to manually create this bucket
+      and copy the functions.zip to the bucket.
+    Type: String
 
 Resources:
   DBEC2SecurityGroup:
@@ -177,6 +127,24 @@ Resources:
       FromPort: '3306'
       ToPort: '3306'
       SourceSecurityGroupId: !Ref BastionSecurityGroupId
+  LambdaInboundRule:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      Description: "This rule is needed to allow Lambda to RDS through Lambda Subnet1."
+      GroupId: !GetAtt DBEC2SecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      CidrIp: !Ref Subnet1IDCIDR
+  LambdaInboundRule2:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      Description: "This rule is needed to allow Lambda to RDS through Lambda Subnet1."
+      GroupId: !GetAtt DBEC2SecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      CidrIp: !Ref Subnet2IDCIDR
   DBSubnetGroup:
     Type: "AWS::RDS::DBSubnetGroup"
     Properties:
@@ -184,6 +152,21 @@ Resources:
       SubnetIds:
       - !Ref Subnet1ID
       - !Ref Subnet2ID
+  LambdaBasicExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonRDSFullAccess
   WPDB:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -202,14 +185,44 @@ Resources:
       MultiAZ: false
       StorageEncrypted: true
       StorageType: gp2
-      DBName: !Ref DBName
       Tags:
         - Key: Name
           Value: !Sub ["${StackName} Confluence MariaDB Database", StackName: !Ref 'AWS::StackName']
       VPCSecurityGroups:
       - !GetAtt DBEC2SecurityGroup.GroupId
-  HelmExample:
+  RDSDBCREATE:
     DependsOn: WPDB
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: RDSDBCreate
+      Description: RDS DB Creatation Lambda
+      Handler: dbcreate-lambda.lambda_handler
+      Runtime: python3.7
+      Role: !GetAtt LambdaBasicExecutionRole.Arn
+      Timeout: 5
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DBEC2SecurityGroup
+        SubnetIds:
+          - !Ref Subnet1ID
+          - !Ref Subnet2ID
+      Code:
+        S3Bucket: !Ref 'ZipsBucket'
+        S3Key: 'function.zip'
+      Environment:
+        Variables:
+          WPDBEndpointAddress: !GetAtt WPDB.Endpoint.Address
+          DBMasterUsername: !Ref DBMasterUsername
+          DBMasterUserPassword: !Ref DBMasterUserPassword
+          DBName: !Ref DBName
+  RDSDBCreateInvoke:
+    DependsOn: RDSDBCREATE
+    Type: AWS::CloudFormation::CustomResource
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt RDSDBCREATE.Arn
+  HelmExample:
+    DependsOn: RDSDBCreateInvoke
     Type: "Custom::Helm"
     Version: '1.0'
     Description: 'This deploys the Helm Chart to deploy wordpress in to the EKS Cluster, using an external database.'
@@ -231,18 +244,15 @@ Resources:
         externalDatabase.password: !Ref DBMasterUserPassword
         externalDatabase.database: !Ref DBName
         externalDatabase.port: 3306
-    WPElbHostName:
-      DependsOn: HelmExample
-      Type: "Custom::KubeGet"
-      Version: '1.0'
-      Properties:
-       ServiceToken: !Ref KubeGetLambdaArn
-       KubeConfigPath: !Ref KubeConfigPath
-       KubeConfigKmsContext: !Ref KubeConfigKmsContext
-       Namespace: !Ref Namespace
-       Name: !Sub 'service/${Name}-wordpress'
-       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
+  WPElbHostName:
+    DependsOn: HelmExample
+    Type: "Custom::KubeGet"
+    Version: '1.0'
+    Properties:
+     ServiceToken: !Ref KubeGetLambdaArn
+     KubeConfigPath: !Ref KubeConfigPath
+     KubeConfigKmsContext: !Ref KubeConfigKmsContext
+     Namespace: !Ref Namespace
+     Name: !Sub 'service/${Name}-wordpress'
+     JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 
-  Outputs:
-    WPElbHostName:
-      Value: !Ref WPElbHostName

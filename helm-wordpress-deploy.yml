@@ -118,5 +118,5 @@ Resources:
      JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 
 Outputs:
-  WPElbHostName:
-    Value: !GetAtt WPElbHostName.Outputs.DNSName
+    WPElbHostName:
+      Value: !Ref WPElbHostName
