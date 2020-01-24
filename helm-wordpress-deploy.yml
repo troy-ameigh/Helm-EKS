@@ -2,6 +2,43 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: This Cloudformation template shows you how to use Cloudformation to deploy
   WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart"
   which is a qre-requist. "https://docs.aws.amazon.com/quickstart/latest/amazon-eks-architecture/welcome.html" **WARNING** You will be billed for the AWS resources used if you create a stack from this template.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Wordpress
+        Parameters:
+          - wordpressUsername
+          - wordpressPassword
+      - Label:
+          default: Kube Cluster
+        Parameters:
+          - KubeClusterName
+          - KubeConfigPath
+          - KubeGetLambdaArn
+          - KubeConfigKmsContext
+          - HelmLambdaArn
+          - Namespace
+          - Name
+    ParameterLabels:
+      wordpressUsername:
+        default: Wordpress Username
+      wordpressPassword:
+        default: Wordpress Password
+      KubeClusterName:
+        default: EKS Kube Cluster Name
+      KubeConfigPath:
+        default: Kube Config Path
+      KubeGetLambdaArn:
+        default: Kube Get Lambda ARN
+      KubeConfigKmsContext:
+        default: Kube KMS Context
+      HelmLambdaArn:
+        default: EKS Stack Helm ARN
+      Namespace:
+        default: Kube Namespace for this function
+      Name:
+        default: Kube Name for this function
 Parameters:
    wordpressUsername:
     AllowedPattern: ^[a-z][a-z0-9_]*$
@@ -80,5 +117,6 @@ Resources:
      Name: !Sub 'service/${Name}-wordpress'
      JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 
-
-
+Outputs:
+  WPElbHostName:
+    Value: !GetAtt WPElbHostName.Outputs.DNSName
