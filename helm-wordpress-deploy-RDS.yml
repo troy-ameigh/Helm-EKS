@@ -209,7 +209,6 @@ Resources:
       VPCSecurityGroups:
       - !GetAtt DBEC2SecurityGroup.GroupId
   HelmExample:
-    DependsOn: WPDB
     Type: "Custom::Helm"
     Version: '1.0'
     Properties:
@@ -217,7 +216,6 @@ Resources:
       KubeConfigPath: !Ref KubeConfigPath
       KubeConfigKmsContext: !Ref KubeConfigKmsContext
       KubeClusterName: !Ref KubeClusterName
-      # RepoUrl: https://github.com/helm/charts/tree/master/stable/wordpress
       Namespace: !Ref Namespace
       Chart: stable/wordpress
       Name: !Ref Name
