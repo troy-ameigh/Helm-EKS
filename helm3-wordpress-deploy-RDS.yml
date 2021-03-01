@@ -14,7 +14,6 @@ Metadata:
           default: Kube Cluster
         Parameters:
           - ClusterName
-          - KubeConfigKmsContext
           - Namespace
           - Name
       - Label:
@@ -35,8 +34,6 @@ Metadata:
         default: Wordpress Password
       ClusterName:
         default: EKS Kube Cluster Name
-      KubeConfigKmsContext:
-        default: Kube KMS Context
       Namespace:
         default: Kube Namespace for this function
       Name:
@@ -80,11 +77,6 @@ Parameters:
    ClusterName:
     Description: 'Use the "EKSClusterName" from the EKSStack outputs section in CloudFormation.'
     Type: String
-   KubeConfigKmsContext:
-    Description: 'This is using the default from the AWS EKS Quick Start, if you modified
-    this context when deploying. You need to use the modified KMS context here.'
-    Type: String
-    Default: "EKSQuickStart"
    Namespace:
     Description: 'Modify to use a custom Namespace. The Namespace up to 63 characters
     long. The characters allowed in names are: digits (0-9), lower case letters (a-z),
@@ -194,7 +186,6 @@ Resources:
     Type: "AWSQS::Kubernetes::Helm"
     Properties:
       ClusterID: !Ref ClusterName
-      KubeConfigKmsContext: !Ref KubeConfigKmsContext
       Namespace: !Ref Namespace
       Chart: stable/wordpress
       Name: !Ref Name
