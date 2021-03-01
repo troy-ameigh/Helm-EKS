@@ -205,7 +205,6 @@ Resources:
     Properties:
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${ClusterName}"
       ClusterName: !Ref ClusterName
-      KubeConfigKmsContext: !Ref KubeConfigKmsContext
       Namespace: !Ref Namespace
       Name: !Sub 'service/${Name}-wordpress'
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
