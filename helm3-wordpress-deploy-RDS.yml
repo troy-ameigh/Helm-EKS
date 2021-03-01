@@ -222,3 +222,5 @@ Resources:
 Outputs:
   WPElbHostName:
     Value: !Ref WPElbHostName
+  RDSDBEndpoint:
+    Value: !GetAtt WPDB.Endpoint.Address
