@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: This Cloudformation template shows you how to use Cloudformation to deploy
-  WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart"
+  WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart" with an Aurora Postgresql DB
   which is a qre-requist. "https://docs.aws.amazon.com/quickstart/latest/amazon-eks-architecture/welcome.html" **WARNING** You will be billed for the AWS resources used if you create a stack from this template.
 Metadata:
   AWS::CloudFormation::Interface:
@@ -17,16 +17,17 @@ Metadata:
           - Namespace
           - Name
       - Label:
-          default: MariaDB (RDS)
+          default: Aurora (RDS)
         Parameters:
-          - DBMasterUsername
-          - DBMasterUserPassword
+          - DBUsername
+          - DBUserPassword
           - DBName
           - Subnet1ID
           - Subnet2ID
           - VPCID
           - NodeGroupSecurityGroupId
           - BastionSecurityGroupId
+          - DBSecurityGroupId
     ParameterLabels:
       wordpressUsername:
         default: Wordpress Username
@@ -38,12 +39,14 @@ Metadata:
         default: Kube Namespace for this function
       Name:
         default: Kube Name for this function
-      DBMasterUsername:
-        default: MariaDB Master User Name
-      DBMasterUserPassword:
-        default: MariaDB Master User Password
+      DBUsername:
+        default: DB User Name
+      DBUserPassword:
+        default: DB User Password
       DBName:
-        default: MariaDB Database Name
+        default: Database Name
+      DBEndPoint:
+        default: AuroraDB EndPoint
       Subnet1ID:
         default: Private Subnet One
       Subnet2ID:
@@ -54,6 +57,8 @@ Metadata:
         default: Node SecurityGroup ID
       BastionSecurityGroupId:
         default: Bastion SecurityGroup ID
+      DBSecurityGroupId:
+        default: RDS DB SecurityGroup ID
 Parameters:
   wordpressUsername:
     AllowedPattern: ^[a-z][a-z0-9_]*$
@@ -89,7 +94,7 @@ Parameters:
     and ..'
     Type: String
     Default: "myrelease-rds"
-  DBMasterUsername:
+  DBUsername:
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: mariadb
@@ -98,7 +103,7 @@ Parameters:
     MinLength: '1'
     NoEcho: 'true'
     Type: String
-  DBMasterUserPassword:
+  DBUserPassword:
     AllowedPattern: '(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*'
     ConstraintDescription: "Min 8 chars. Must include 1 uppercase, 1 lowercase, 1 number, 1 (non / @ \" ') symbol"
     Description: "Password for the master ('mariadb') account. Password must meeting the following: Min 8 chars. Must include 1 uppercase, 1 lowercase, 1 number, 1 (non / @ \" ') symbol."
@@ -114,6 +119,16 @@ Parameters:
     MaxLength: '64'
     MinLength: '1'
     Type: String
+  DBPort:
+    Description: "The RDS Aurora DB port."
+    Type: String
+    Default: 3306
+  DBEndPoint:
+     Description: "The RDS Aurora DB Endpoint URL."
+     Type: String
+  DBSecurityGroupId:
+     Description: 'Get DBSecurityGroupId from the Aurora MySql DB Stack outputs section in CloudFormation.'
+     Type: String
   Subnet1ID:
     Description: 'Get Private Subnet 1 ID from the VPCStack outputs section in CloudFormation.'
     Type: AWS::EC2::Subnet::Id
@@ -131,57 +146,24 @@ Parameters:
     Description: 'Get VCP ID from the VPCStack outputs section in CloudFormation.'
 
 Resources:
-  DBEC2SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  DBIngressSG:
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupDescription: Open database for access
-      VpcId: !Ref VPCID
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 3306
-        ToPort: 3306
-        SourceSecurityGroupId: !Ref NodeGroupSecurityGroupId
-        Description: "This rule is needed to allow RDS from the Node Instances."
-  DBInboundRule:
-    Type: "AWS::EC2::SecurityGroupIngress"
-    Properties:
-      Description: "This rule is needed to allow RDS from the Bastion Instance."
-      GroupId: !GetAtt DBEC2SecurityGroup.GroupId
+      GroupId: !Ref DBSecurityGroupId
+      SourceSecurityGroupId: !Ref NodeGroupSecurityGroupId
       IpProtocol: tcp
-      FromPort: 3306
-      ToPort: 3306
+      FromPort: !Ref DBPort
+      ToPort: !Ref DBPort
+      Description: "This rule is needed to allow RDS from the Node Instances."
+  DBInboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DBSecurityGroupId
       SourceSecurityGroupId: !Ref BastionSecurityGroupId
-  DBSubnetGroup:
-    Type: "AWS::RDS::DBSubnetGroup"
-    Properties:
-      DBSubnetGroupDescription: "Subnets available for the MariaDB database instance"
-      SubnetIds:
-      - !Ref Subnet1ID
-      - !Ref Subnet2ID
-  WPDB:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      AllocatedStorage: '10'
-      AutoMinorVersionUpgrade: true
-      BackupRetentionPeriod: 7
-      DBInstanceClass: db.m5.large
-      # In the next line of code the '-DB' delimeter is used to get the root stack name for database identifier
-      # 'AWS::StackName' produces MASTER_STACK_NAME-DB (as DB is the name of the nested stack resource).
-      DBInstanceIdentifier: !Sub ["${RootStack}-db", RootStack: !Select [0, !Split ['-DB', !Ref 'AWS::StackName']]]
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      Engine: mariadb
-      EngineVersion: '10.3'
-      MasterUsername: !Ref DBMasterUsername
-      MasterUserPassword: !Ref DBMasterUserPassword
-      MultiAZ: false
-      StorageEncrypted: true
-      StorageType: gp2
-      DBName: !Ref DBName
-      Tags:
-        - Key: Name
-          Value: !Sub ["${StackName} Confluence MariaDB Database", StackName: !Ref 'AWS::StackName']
-      VPCSecurityGroups:
-      - !GetAtt DBEC2SecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: !Ref DBPort
+      ToPort: !Ref DBPort
+      Description: "This rule is needed to allow RDS from the Node Instances."
   HelmExample:
     Type: "AWSQS::Kubernetes::Helm"
     Properties:
@@ -193,11 +175,11 @@ Resources:
         wordpressUsername: !Ref wordpressUsername
         wordpressPassword: !Ref wordpressPassword
         mariadb.enabled: false
-        externalDatabase.host: !GetAtt WPDB.Endpoint.Address
-        externalDatabase.user: !Ref DBMasterUsername
-        externalDatabase.password: !Ref DBMasterUserPassword
+        externalDatabase.host: !Ref DBEndPoint
+        externalDatabase.user: !Ref DBUsername
+        externalDatabase.password: !Ref DBUserPassword
         externalDatabase.database: !Ref DBName
-        externalDatabase.port: 3306
+        externalDatabase.port: !Ref DBPort
   WPElbHostName:
     DependsOn: HelmExample
     Type: "Custom::KubeGet"
@@ -212,5 +194,3 @@ Resources:
 Outputs:
   WPElbHostName:
     Value: !Ref WPElbHostName
-  RDSDBEndpoint:
-    Value: !GetAtt WPDB.Endpoint.Address
