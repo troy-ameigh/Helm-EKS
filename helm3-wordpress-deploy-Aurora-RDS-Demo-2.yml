@@ -28,6 +28,7 @@ Metadata:
           - NodeGroupSecurityGroupId
           - BastionSecurityGroupId
           - DBSecurityGroupId
+          - DBAccessCIDR
       - Label:
           default: Quick Start configuration
         Parameters:
@@ -71,6 +72,8 @@ Metadata:
         default: Quick Start S3 bucket region
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
+      DBAccessCIDR:
+        default: Database connection CIDR
 Parameters:
   QSS3BucketName:
     AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
@@ -169,6 +172,12 @@ Parameters:
   VPCID:
     Type: AWS::EC2::VPC::Id
     Description: 'Get VCP ID from the VPCStack outputs section in CloudFormation.'
+  DBAccessCIDR:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/([0-9]|[1-2][0-9]|3[0-2]))$"
+    ConstraintDescription: "CIDR block parameter must be in the form x.x.x.x/x"
+    Description: "Allowed CIDR block for external access (use VPC CIDR)."
+    Type: String
+    Default: 10.0.0.0/16
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Resources:
