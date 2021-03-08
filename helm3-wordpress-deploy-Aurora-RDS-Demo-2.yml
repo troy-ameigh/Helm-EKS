@@ -218,7 +218,7 @@ Resources:
         NotificationList: ameighta@amazon.com
         QSS3BucketName: !Ref QSS3BucketName
         QSS3BucketRegion: !Ref QSS3BucketRegion
-        QSS3KeyPrefix: !Ref QSS3KeyPrefixsubmodules/quickstart-amazon-aurora-mysql/
+        QSS3KeyPrefix: !Sub ${QSS3KeyPrefix}submodules/quickstart-amazon-aurora-mysql/
         RotateDBPassword: "false"
   HelmExample:
     Type: "AWSQS::Kubernetes::Helm"
