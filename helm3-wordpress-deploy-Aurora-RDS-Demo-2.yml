@@ -176,7 +176,6 @@ Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Resources:
   RDSSecurityGroup:
-    Condition: CreateSecurityGroup
     Properties:
       GroupDescription: "Allow access to database port"
       SecurityGroupEgress:
