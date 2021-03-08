@@ -175,10 +175,29 @@ Parameters:
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Resources:
+  RDSSecurityGroup:
+    Condition: CreateSecurityGroup
+    Properties:
+      GroupDescription: "Allow access to database port"
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: -1
+          IpProtocol: '-1'
+          ToPort: -1
+      SecurityGroupIngress:
+        - CidrIp: !Ref DBAccessCIDR
+          FromPort: !Ref DBPort
+          IpProtocol: tcp
+          ToPort: !Ref DBPort
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: Name
+          Value: !Sub RDSSecurityGroup-${AWS::StackName}
+    Type: "AWS::EC2::SecurityGroup"
   DBIngressSG:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt AuroraDB.Outputs.RDSSecurityGroup
+      GroupId: !GetAtt 'RDSSecurityGroup.GroupId'
       SourceSecurityGroupId: !Ref NodeGroupSecurityGroupId
       IpProtocol: tcp
       FromPort: !Ref DBPort
@@ -187,7 +206,7 @@ Resources:
   DBInboundRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt AuroraDB.Outputs.RDSSecurityGroup
+      GroupId: !GetAtt 'RDSSecurityGroup.GroupId'
       SourceSecurityGroupId: !Ref BastionSecurityGroupId
       IpProtocol: tcp
       FromPort: !Ref DBPort
@@ -220,6 +239,7 @@ Resources:
         QSS3BucketRegion: !Ref QSS3BucketRegion
         QSS3KeyPrefix: !Sub ${QSS3KeyPrefix}submodules/quickstart-amazon-aurora-mysql/
         RotateDBPassword: "false"
+        CustomDBSecurityGroup: !GetAtt 'RDSSecurityGroup.GroupId'
   HelmExample:
     Type: "AWSQS::Kubernetes::Helm"
     Properties:
