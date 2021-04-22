@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: This Cloudformation template shows you how to use Cloudformation to deploy
-  WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart" with an Aurora Postgresql DB
+  WordPress using Helm charts. You will be deploying this into the "Amazon EKS QuickStart" with an Aurora Postgresql DB(External to the Template)
   which is a qre-requist. "https://docs.aws.amazon.com/quickstart/latest/amazon-eks-architecture/welcome.html" **WARNING** You will be billed for the AWS resources used if you create a stack from this template.
 Metadata:
   AWS::CloudFormation::Interface:
