@@ -97,7 +97,7 @@ Parameters:
   DBUsername:
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
-    Default: mariadb
+    Default: msadmin
     Description: "The database admin account username"
     MaxLength: '16'
     MinLength: '1'
@@ -129,21 +129,12 @@ Parameters:
   DBSecurityGroupId:
      Description: 'Get DBSecurityGroupId from the Aurora MySql DB Stack outputs section in CloudFormation.'
      Type: String
-  Subnet1ID:
-    Description: 'Get Private Subnet 1 ID from the VPCStack outputs section in CloudFormation.'
-    Type: AWS::EC2::Subnet::Id
-  Subnet2ID:
-    Description: 'Get Private Subnet 2 ID from the VPCStack outputs section in CloudFormation.'
-    Type: AWS::EC2::Subnet::Id
   NodeGroupSecurityGroupId:
     Description: 'Get NodeGroupSecurityGroupId from the EKSStack outputs section in CloudFormation.'
     Type: String
   BastionSecurityGroupId:
     Description: 'Get BastionSecurityGroupId from the EKSStack outputs section in CloudFormation.'
     Type: String
-  VPCID:
-    Type: AWS::EC2::VPC::Id
-    Description: 'Get VCP ID from the VPCStack outputs section in CloudFormation.'
 
 Resources:
   DBIngressSG:
